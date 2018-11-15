@@ -64,7 +64,8 @@ void set_sig_level(
   uint32_t val = (mag << 24) | (mag << 8);
 
   // wait for the start of an interrupt, not just one already
-  // in progress (hence two loops)
+  // triggered (hence two loops); this guarantees enough
+  // time to load the shadow registers before the next shift
 
   while((SGPIO_STATUS_1 & 1) == 0);
   SGPIO_CLR_STATUS_1 = 0xffff;
@@ -122,25 +123,33 @@ void send_lotek_tagid_1(uint_fast8_t sig)
   set_sig_level(0x00);
 }
 
-/* FSK: freq=0; freq+50kHz = 1; 25kbps preamble: 0xAAAAD391 MSB first.
-   To impose 50 kHz waveform for 1/25000 second, we need to add two cycles
+/* FSK: freq - 25kHz = 0; freq + 25 kHz = 1; 25kbps. Preamble: 0xAAAAD391,
+   MSB first.
+   We tune to freq - 25 kHz ("0"), then use a 50 kHz waveform for freq + 25 kHz
+   ("1"). To emit a 50 kHz waveform for 1/25000 second, we need to add two cycles
    and at 8 MSPS, that is 320 samples, so 1 cycle over 160 samples.
    Note:  buf[] is uint32 formatted as Q1I1Q0I0, so two samples, while
    bp points to individual int8 samples.
-   In practice, we found 159 works a bit better than 160.
 
-   the FSK frequency is set by WAVEFORM_M: a cycle lasts that many samples @ 8 MSPS
-   if WAVEFORM_M is odd, we generate two waveforms so that going back to the first
-   buffer slot is correct (there are two samples per 32-bit int)
+   The FSK frequency is set by WAVEFORM_M: a cycle lasts that many samples @ 8 MSPS
+   We generate multiple waveforms to ensure we don't overstep the buffer when
+   stuffing shadow registers, as we'd like to do that quickly, without bounds
+   checking.
 */
 
 #define WAVEFORM_M 160
 #define WAVEFORM_N 2
-int32_t  __attribute__ ((aligned (4))) trigbuf[WAVEFORM_M * 2]; // cos(),sin() * 2^24
+
+// a buffer of full-amplitude I/Q wave samples, with 23-bit precision
+// this is generated once
+int32_t  __attribute__ ((aligned (4))) trigbuf[WAVEFORM_M * 2]; // cos(),sin() * 2^23
+
+// buffer of attenuated I/Q sample values; generated each time we emit
+// the tag because it varies with sig; we could be smarter about this
+// but want constant timing
+
 uint32_t __attribute__ ((aligned (4))) buf    [(WAVEFORM_N * WAVEFORM_M + 1)/ 2]; // waveform as I/Q
 
-// we generate one or two waveforms, depending on whether WAVEFORM_M is
-// odd or even.
 void send_ctt_tag(uint64_t freq, uint_fast8_t sig, uint32_t id) {
   int8_t *bp = (int8_t *) & buf[0];
 
@@ -149,8 +158,8 @@ void send_ctt_tag(uint64_t freq, uint_fast8_t sig, uint32_t id) {
     *bp++ = sig * trigbuf[(2*i + 1) % (2 * WAVEFORM_M)] >> 23;
   }
 
-  // now that we've spent a few milliseconds doing trig, turn
-  // on the transmitter
+  // now that we've spent a few milliseconds (?) doing multiplication,
+  // turn on the transmitter
 
   set_sig_level(0);
   set_freq(freq - 25000);
@@ -168,7 +177,7 @@ void send_ctt_tag(uint64_t freq, uint_fast8_t sig, uint32_t id) {
     for (; j < 32; ++j) {
       // each bit is 1/25000 sec i.e. 320 samples at 8 MSPS
       // we send these either with constant I/Q (carrier freq)
-      // or with I/Q rotating twice
+      // or with I/Q from the generated waveform
       uint_fast8_t incr = (code & 0x80000000) ? 1 : 0;
       for (uint_fast8_t k = 0; k < 20; ++k) {
         while((SGPIO_STATUS_1 & 1) == 0x00);
@@ -257,7 +266,10 @@ int main(void) {
   SGPIO_SET_EN_1 = 1 << SGPIO_SLICE_A;
   sgpio_cpld_stream_enable(&sgpio_config);
   // use constant gain; amplitude modulation will use DAC samples
-  max2837_set_txvga_gain(&max2837, 25);
+  // we use the max possible TX gain for testing funcubedongles and
+  // rtlsdr dongles that don't have attached antennas.
+
+  max2837_set_txvga_gain(&max2837, 45);
 
   // start with maximum signal strength
   uint8_t sig = 0x80;
@@ -267,15 +279,17 @@ int main(void) {
   uint64_t lotek_freqs[NUM_LOTEK_FREQS] = {150.1E6, 150.34E6, 151.5E5, 166.38E6};
   int64_t lotek_dfreq = 0;
 
+  // generate a full-scale waveform
   for(int i = 0; i < WAVEFORM_M; ++i) {
     trigbuf[2 * i]     = rint((1<<23) * cos(2.0 * M_PI * i / (double) WAVEFORM_M));
     trigbuf[2 * i + 1] = rint((1<<23) * sin(2.0 * M_PI * i / (double) WAVEFORM_M));
   }
 
-  int fcount = 20; // number of consecutive bursts to emit at each frequency, signal strength
+  // number of consecutive bursts to emit at each frequency and signal strength
+  int fcount = 20;
   while(1) {
     for (uint_fast8_t i = 0; i < NUM_LOTEK_FREQS; ++i) {
-      /* Lotek code 1 @ 166.38 MHz */
+      /* Lotek code 1 @ lotek_freqs[i] */
       leds_set((i+1));
       set_freq(lotek_freqs[i] + lotek_dfreq);
       set_sig_level(0);

@@ -1,6 +1,6 @@
 ### Simple firmware to simulate wildlife radio telemetry tags ###
 
-With this firmware loaded into SPIflash, the HackRF-One serves
+With this firmware loaded into SPI flash, the HackRF-One serves
 as a free-standing tag simulator, needing USB only for power
 (i.e. it operates *without* an attached computer controlling the
 unit).
@@ -16,15 +16,15 @@ It emits these tags:
   151.5  MHz
   166.38 MHz
 
-- CTT ("lifetag") tag ID 0x61337F34.  This ID is emitted at 434.000 MHz.
-  It consists of a 32-bit pre-amble, then the ID code, emitted high-order
-  bit first, via frequency-shift keying between 434.025 MHz and 433.975 MHz
-  (i.e. carrier +/- 25 kHz, with +25 kHz = "1", and -25 kHz = "0").
-  The bit clock is 25 kHz.
+- CTT ("lifetag") tag ID 0x61337F34.  This ID is emitted at 434.000
+  MHz.  It consists of a 32-bit pre-amble, then the ID code, emitted
+  high-order bit first, via binary frequency-shift keying between
+  434.025 MHz and 433.975 MHz (i.e. carrier +/- 25 kHz, with +25 kHz =
+  "1", and -25 kHz = "0").  The bit clock rate is 25 kHz.
 
 All tags repeat on a cycle of 1.000 seconds.
 
-After each 20 seconds, the signal strength is changed by 15 units on a
+Every 20 seconds, the signal strength is changed by 15 units on a
 linear scale from 128 to 0; i.e. sig(n+1) = sig(n) - 15 (modulo 129)
 For the Lotek tags, an offset is added to the carrier frequency, and
 this also changes every 20 seconds, by +131 Hz, but wrapping in the range
