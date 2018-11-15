@@ -272,6 +272,7 @@ int main(void) {
     trigbuf[2 * i + 1] = rint((1<<23) * sin(2.0 * M_PI * i / (double) WAVEFORM_M));
   }
 
+  int fcount = 20; // number of consecutive bursts to emit at each frequency, signal strength
   while(1) {
     for (uint_fast8_t i = 0; i < NUM_LOTEK_FREQS; ++i) {
       /* Lotek code 1 @ 166.38 MHz */
@@ -290,15 +291,18 @@ int main(void) {
     send_ctt_tag(434000000, sig, 0x61337F34);
     delay_us(208950); // enough to take BI to 1.000 s
 
-    if (sig >= 15) {
-      sig -= 15;
-    } else {
-      sig = 0x80 + sig - 15;
-    }
-    if (lotek_dfreq < 4096) {
-      lotek_dfreq += 131;
-    } else {
-      lotek_dfreq -= 8192;
+    if (! --fcount) {
+      if (sig >= 15) {
+        sig -= 15;
+      } else {
+        sig = 0x80 + sig - 15;
+      }
+      if (lotek_dfreq < 4096) {
+        lotek_dfreq += 131;
+      } else {
+        lotek_dfreq -= 8192;
+      }
+      fcount = 20;
     }
   }
   return 0;
