@@ -36,3 +36,11 @@ if (lotek_dfreq < 4096) {
   lotek_dfreq -= 8192;
  }
 ```
+
+The hackRF LEDs indicate what is being transmitted:
+
+ - □□🔴 Lotek tag @ 150.1 MHz
+ - □💛□ Lotek tag @ 150.34 MHz
+ - □💛🔴 Lotek tag @ 151.5 MHz
+ - 💚□□ Lotek tag @ 166.38 MHz
+ - 💚💛🔴 CTT tag @ 434 MHz
