@@ -11,10 +11,10 @@ It emits these tags:
   pulses 2.5 ms long.  The ID "1" is encoded by the gaps between these
   pulses.  This ID is emitted at the following frequencies:
 
-  150.1  MHz
-  150.34 MHz
-  151.5  MHz
-  166.38 MHz
+  - 150.1  MHz
+  - 150.34 MHz
+  - 151.5  MHz
+  - 166.38 MHz
 
 - CTT ("lifetag") tag ID 0x61337F34.  This ID is emitted at 434.000
   MHz.  It consists of a 32-bit pre-amble, then the ID code, emitted
@@ -39,8 +39,8 @@ if (lotek_dfreq < 4096) {
 
 The hackRF LEDs indicate what is being transmitted:
 
- - □□🔴 Lotek tag @ 150.1 MHz
- - □💛□ Lotek tag @ 150.34 MHz
- - □💛🔴 Lotek tag @ 151.5 MHz
- - 💚□□ Lotek tag @ 166.38 MHz
- - 💚💛🔴 CTT tag @ 434 MHz
+ - □□🔴 Lotek tag 1 @ 150.1 MHz
+ - □💛□ Lotek tag 1 @ 150.34 MHz
+ - □💛🔴 Lotek tag 1 @ 151.5 MHz
+ - 💚□□ Lotek tag 1 @ 166.38 MHz
+ - 💚💛🔴 CTT tag 0x61337F34 @ 434 MHz
