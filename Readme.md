@@ -1,3 +1,8 @@
+This fork of HackRF adds firmware to simulate Lotek and CTT telemetry tags.
+See [tagsim](https://github.com/jbrzusto/hackrf/tree/tagsim/firmware/tagsim)
+
+---
+
 This repository contains hardware designs and software for HackRF,
 a low cost, open source Software Defined Radio platform.
 
